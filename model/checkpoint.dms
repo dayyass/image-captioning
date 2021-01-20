@@ -1,0 +1,2 @@
+model_checkpoint_path: "/content/gdrive/My Drive/colab/weights"
+all_model_checkpoint_paths: "/content/gdrive/My Drive/colab/weights"
