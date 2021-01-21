@@ -254,27 +254,35 @@ if __name__ == "__main__":
 
     @bot.message_handler(commands=["start"])
     def start_message(message):
+        en_msg = "Hello, I'm an image captioning chat bot :)"
+        ru_msg = "Привет, я чат-бот, который описыват изображения :)"
         bot.send_message(
             message.chat.id,
-            "Hello, I'm an image captioning chat bot :)\nПривет, я чат-бот, который описыват изображения :)",
+            f"{en_msg}\n{ru_msg}",
         )
 
     @bot.message_handler(content_types=["text"])
     def send_text(message):
-        print(message.text, message.chat.id)
-        bot.send_message(message.chat.id, "Send me an image\nОтправь мне изображение")
+        en_msg = "Send me an image so I can describe it :)"
+        ru_msg = "Отправь мне изображение, чтобы я мог описать его :)"
+        bot.send_message(
+            message.chat.id,
+            f"{en_msg}\n{ru_msg}",
+        )
 
     @bot.message_handler(content_types=["photo"])
     def send_image(message):
         fileID = message.photo[-1].file_id
         file = bot.get_file(fileID)
-        print("file.file_path =", file.file_path)
         downloaded_file = bot.download_file(file.file_path)
+
         arr = Image.open(io.BytesIO(downloaded_file))
         arr = np.array(arr)
         caption = apply_model_to_image(arr)
+
         translations = translator.translate(caption, dest="ru", src="en")
         ru_caption = translations.text
+
         bot.send_message(message.chat.id, "{}\n{}".format(caption, ru_caption))
 
     bot.polling()
