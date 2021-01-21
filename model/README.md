@@ -1,3 +1,3 @@
 ### Model
 
-Trained **TensorFlow** model with corresponding vocabulary.
+Trained Image Captioning **TensorFlow** model with corresponding vocabulary.
