@@ -1,24 +1,21 @@
-import os
+import io
 import json
-import numpy as np
+import os
 
+import numpy as np
 import tensorflow as tf
+from googletrans import Translator
+from PIL import Image
+from telebot import TeleBot
 from tensorflow.contrib import keras
-L = keras.layers
-K = keras.backend
 
 import utils
 from keras_utils import reset_tf_session
 
-import io
-from PIL import Image
-from telebot import TeleBot
-from googletrans import Translator
+# HYPER-PARAMETERS
 
-
-# hyper-parameters
-VOCAB_PATH = './model/vocab.json'
-PATH_TO_MODEL = './model/weights'
+VOCAB_PATH = "./model/vocab.json"
+PATH_TO_MODEL = "./model/weights"
 
 IMG_SIZE = 299
 IMG_EMBED_SIZE = 2048
@@ -33,12 +30,19 @@ START = "#START#"
 END = "#END#"
 
 
-with open(VOCAB_PATH, mode='r') as f:
+# VOCAB
+
+with open(VOCAB_PATH, mode="r") as f:
     vocab = json.load(f)
 
 idx2word = {idx: w for w, idx in vocab.items()}
 pad_idx = vocab[PAD]
 
+
+# TENSORFLOW
+
+L = keras.layers
+K = keras.backend
 
 # remember to reset your graph if you want to start building it from scratch!
 s = reset_tf_session()
@@ -52,34 +56,38 @@ saver = tf.train.Saver()
 s.run(tf.global_variables_initializer())
 
 
+# MODEL
+
 # we take the last hidden layer of IncetionV3 as an image embedding
 def get_cnn_encoder():
     K.set_learning_phase(False)
     model = keras.applications.InceptionV3(include_top=False)
     preprocess_for_model = keras.applications.inception_v3.preprocess_input
 
-    model = keras.models.Model(model.inputs, keras.layers.GlobalAveragePooling2D()(model.output))
+    model = keras.models.Model(
+        model.inputs, keras.layers.GlobalAveragePooling2D()(model.output)
+    )
     return model, preprocess_for_model
 
 
 class decoder:
     # [batch_size, IMG_EMBED_SIZE] of CNN image features
-    img_embeds = tf.placeholder('float32', [None, IMG_EMBED_SIZE])
+    img_embeds = tf.placeholder("float32", [None, IMG_EMBED_SIZE])
     # [batch_size, time steps] of word ids
-    sentences = tf.placeholder('int32', [None, None])
+    sentences = tf.placeholder("int32", [None, None])
 
     # we use bottleneck here to reduce the number of parameters
     # image embedding -> bottleneck
     img_embed_to_bottleneck = L.Dense(
         IMG_EMBED_BOTTLENECK,
         input_shape=(None, IMG_EMBED_SIZE),
-        activation='elu',
+        activation="elu",
     )
     # image embedding bottleneck -> lstm initial state
     img_embed_bottleneck_to_h0 = L.Dense(
         LSTM_UNITS,
         input_shape=(None, IMG_EMBED_BOTTLENECK),
-        activation='elu',
+        activation="elu",
     )
     # word -> embedding
     word_embed = L.Embedding(len(vocab), WORD_EMBED_SIZE)
@@ -113,7 +121,8 @@ class decoder:
     # all the hidden states with one tensorflow operation (tf.nn.dynamic_rnn).
     # `hidden_states` has a shape of [batch_size, time steps, LSTM_UNITS].
     hidden_states, _ = tf.nn.dynamic_rnn(
-        lstm, word_embeds,
+        lstm,
+        word_embeds,
         initial_state=tf.nn.rnn_cell.LSTMStateTuple(c0, h0),
     )
 
@@ -137,8 +146,7 @@ class decoder:
 
     # compute cross-entropy between `flat_ground_truth` and `flat_token_logits` predicted by lstm
     xent = tf.nn.sparse_softmax_cross_entropy_with_logits(
-        labels=flat_ground_truth,
-        logits=flat_token_logits
+        labels=flat_ground_truth, logits=flat_token_logits
     )
 
     # compute average `xent` over tokens with nonzero `flat_loss_mask`.
@@ -159,23 +167,27 @@ class final_model:
     lstm_h = tf.Variable(tf.zeros([1, LSTM_UNITS]), name="hidden")
 
     # input images
-    input_images = tf.placeholder('float32', [1, IMG_SIZE, IMG_SIZE, 3], name='images')
+    input_images = tf.placeholder("float32", [1, IMG_SIZE, IMG_SIZE, 3], name="images")
 
     # get image embeddings
     img_embeds = encoder(input_images)
 
     # initialize lstm state conditioned on image
-    init_c = init_h = decoder.img_embed_bottleneck_to_h0(decoder.img_embed_to_bottleneck(img_embeds))
+    init_c = init_h = decoder.img_embed_bottleneck_to_h0(
+        decoder.img_embed_to_bottleneck(img_embeds)
+    )
     init_lstm = tf.assign(lstm_c, init_c), tf.assign(lstm_h, init_h)
 
     # current word index
-    current_word = tf.placeholder('int32', [1], name='current_input')
+    current_word = tf.placeholder("int32", [1], name="current_input")
 
     # embedding for current word
     word_embed = decoder.word_embed(current_word)
 
     # apply lstm cell, get new lstm states
-    new_c, new_h = decoder.lstm(word_embed, tf.nn.rnn_cell.LSTMStateTuple(lstm_c, lstm_h))[1]
+    new_c, new_h = decoder.lstm(
+        word_embed, tf.nn.rnn_cell.LSTMStateTuple(lstm_c, lstm_h)
+    )[1]
 
     # compute logits for next token
     new_logits = decoder.token_logits(decoder.token_logits_bottleneck(new_h))
@@ -212,7 +224,9 @@ def generate_caption(image, t=1, sample=False, max_len=20):
         next_word_probs = next_word_probs.ravel()
 
         # apply temperature
-        next_word_probs = next_word_probs ** (1 / t) / np.sum(next_word_probs ** (1 / t))
+        next_word_probs = next_word_probs ** (1 / t) / np.sum(
+            next_word_probs ** (1 / t)
+        )
 
         if sample:
             next_word = np.random.choice(range(len(vocab)), p=next_word_probs)
@@ -227,43 +241,39 @@ def generate_caption(image, t=1, sample=False, max_len=20):
 
 
 def apply_model_to_image(img):
-    img = utils.crop_and_preprocess(img, (IMG_SIZE, IMG_SIZE), final_model.preprocess_for_model)
-    return ' '.join(generate_caption(img)[1:-1])
+    img = utils.crop_and_preprocess(
+        img, (IMG_SIZE, IMG_SIZE), final_model.preprocess_for_model
+    )
+    return " ".join(generate_caption(img)[1:-1])
 
 
 if __name__ == "__main__":
     translator = Translator()
-    bot = TeleBot('TOKEN')
+    bot = TeleBot("TOKEN")
 
-
-    @bot.message_handler(commands=['start'])
+    @bot.message_handler(commands=["start"])
     def start_message(message):
         bot.send_message(
             message.chat.id,
-            "Hello, I'm an image captioning chat bot :)\nПривет, я чат-бот, который описыват изображения :)"
+            "Hello, I'm an image captioning chat bot :)\nПривет, я чат-бот, который описыват изображения :)",
         )
 
-
-    @bot.message_handler(content_types=['text'])
+    @bot.message_handler(content_types=["text"])
     def send_text(message):
         print(message.text, message.chat.id)
-        bot.send_message(
-            message.chat.id,
-            'Send me an image\nОтправь мне изображение'
-        )
+        bot.send_message(message.chat.id, "Send me an image\nОтправь мне изображение")
 
-
-    @bot.message_handler(content_types=['photo'])
+    @bot.message_handler(content_types=["photo"])
     def send_image(message):
         fileID = message.photo[-1].file_id
         file = bot.get_file(fileID)
-        print('file.file_path =', file.file_path)
+        print("file.file_path =", file.file_path)
         downloaded_file = bot.download_file(file.file_path)
         arr = Image.open(io.BytesIO(downloaded_file))
         arr = np.array(arr)
         caption = apply_model_to_image(arr)
-        translations = translator.translate(caption, dest='ru', src='en')
+        translations = translator.translate(caption, dest="ru", src="en")
         ru_caption = translations.text
-        bot.send_message(message.chat.id, '{}\n{}'.format(caption, ru_caption))
+        bot.send_message(message.chat.id, "{}\n{}".format(caption, ru_caption))
 
     bot.polling()

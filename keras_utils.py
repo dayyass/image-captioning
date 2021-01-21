@@ -1,35 +1,39 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from collections import defaultdict
-import numpy as np
-from keras.models import save_model
-import tensorflow as tf
+
 import keras
+import numpy as np
+import tensorflow as tf
 from keras import backend as K
+from keras.models import save_model
+
 import tqdm_utils
 
 
 class TqdmProgressCallback(keras.callbacks.Callback):
-
     def on_train_begin(self, logs=None):
-        self.epochs = self.params['epochs']
+        self.epochs = self.params["epochs"]
 
     def on_epoch_begin(self, epoch, logs=None):
-        print('\nEpoch %d/%d' % (epoch + 1, self.epochs))
+        print("\nEpoch %d/%d" % (epoch + 1, self.epochs))
         if "steps" in self.params:
             self.use_steps = True
-            self.target = self.params['steps']
+            self.target = self.params["steps"]
         else:
             self.use_steps = False
-            self.target = self.params['samples']
+            self.target = self.params["samples"]
         self.prog_bar = tqdm_utils.tqdm_notebook_failsafe(total=self.target)
         self.log_values_by_metric = defaultdict(list)
 
     def _set_prog_bar_desc(self, logs):
-        for k in self.params['metrics']:
+        for k in self.params["metrics"]:
             if k in logs:
                 self.log_values_by_metric[k].append(logs[k])
-        desc = "; ".join("{0}: {1:.4f}".format(k, np.mean(values)) for k, values in self.log_values_by_metric.items())
+        desc = "; ".join(
+            "{0}: {1:.4f}".format(k, np.mean(values))
+            for k, values in self.log_values_by_metric.items()
+        )
         if hasattr(self.prog_bar, "set_description_str"):  # for new tqdm versions
             self.prog_bar.set_description_str(desc)
         else:
@@ -40,7 +44,7 @@ class TqdmProgressCallback(keras.callbacks.Callback):
         if self.use_steps:
             self.prog_bar.update(1)
         else:
-            batch_size = logs.get('size', 0)
+            batch_size = logs.get("size", 0)
             self.prog_bar.update(batch_size)
         self._set_prog_bar_desc(logs)
 
@@ -52,7 +56,6 @@ class TqdmProgressCallback(keras.callbacks.Callback):
 
 
 class ModelSaveCallback(keras.callbacks.Callback):
-
     def __init__(self, file_name):
         super(ModelSaveCallback, self).__init__()
         self.file_name = file_name

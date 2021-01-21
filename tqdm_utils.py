@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+
 import tqdm
+
 tqdm.monitor_interval = 0  # workaround for https://github.com/tqdm/tqdm/issues/481
 
 
-class SimpleTqdm():
+class SimpleTqdm:
     def __init__(self, iterable=None, total=None, **kwargs):
         self.iterable = list(iterable) if iterable is not None else None
         self.total = len(self.iterable) if self.iterable is not None else total
@@ -21,10 +23,12 @@ class SimpleTqdm():
         self.desc = desc
 
     def update(self, steps):
-        last_print_step = (self.current_step // self.print_frequency) * self.print_frequency
+        last_print_step = (
+            self.current_step // self.print_frequency
+        ) * self.print_frequency
         i = 1
         while last_print_step + i * self.print_frequency <= self.current_step + steps:
-            print("*", end='')
+            print("*", end="")
             i += 1
         self.current_step += steps
 
@@ -49,8 +53,10 @@ class SimpleTqdm():
 
 def use_simple_tqdm():
     try:
-        import google.colab
         import os
+
+        import google.colab  # noqa: F401
+
         return not bool(int(os.environ.get("EXPERIMENTAL_TQDM", "0")))
     except ImportError:
         return False

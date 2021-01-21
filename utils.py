@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import os
+import pickle
 import queue
 import threading
 import zipfile
+
 import cv2
 import numpy as np
-import pickle
+
 import tqdm_utils
 
 
@@ -24,7 +26,7 @@ def image_center_crop(img):
         diff = w - h
         pad_left = diff - diff // 2
         pad_right = diff // 2
-    return img[pad_top:h-pad_bottom, pad_left:w-pad_right, :]
+    return img[pad_top : h - pad_bottom, pad_left : w - pad_right, :]  # noqa: E203
 
 
 def decode_image_from_buf(buf):
@@ -41,7 +43,14 @@ def crop_and_preprocess(img, input_shape, preprocess_for_model):
     return img
 
 
-def apply_model(zip_fn, model, preprocess_for_model, extensions=(".jpg",), input_shape=(224, 224), batch_size=32):
+def apply_model(
+    zip_fn,
+    model,
+    preprocess_for_model,
+    extensions=(".jpg",),
+    input_shape=(224, 224),
+    batch_size=32,
+):
     # queue for cropped images
     q = queue.Queue(maxsize=batch_size * 10)
 
