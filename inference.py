@@ -48,13 +48,6 @@ K = keras.backend
 s = reset_tf_session()
 tf.set_random_seed(42)
 
-# will be used to save/load network weights.
-# you need to reset your default graph and define it in the same way to be able to load the saved weights!
-saver = tf.train.Saver()
-
-# intialize all variables
-s.run(tf.global_variables_initializer())
-
 
 # MODEL
 
@@ -153,6 +146,14 @@ class decoder:
     # we don't want to account misclassification of PAD tokens, because that doesn't make sense,
     # we have PAD tokens for batching purposes only!
     loss = tf.reduce_mean(tf.boolean_mask(xent, flat_loss_mask))
+
+
+# will be used to save/load network weights.
+# you need to reset your default graph and define it in the same way to be able to load the saved weights!
+saver = tf.train.Saver()
+
+# intialize all variables
+s.run(tf.global_variables_initializer())
 
 
 class final_model:
