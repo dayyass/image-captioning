@@ -2,7 +2,7 @@
 
 My solution to the **Image Captioning Final Project** of the [*Introduction to Deep Learning*](https://www.coursera.org/learn/intro-to-deep-learning) course in the [*Advanced Machine Learning*](https://www.coursera.org/specializations/aml) specialization on Coursera.
 
-Trained model is also deployed as a [telegram bot](https://t.me/dayyass_image_captioning_bot), so you have the opportunity to play with it.<br/>
+[Trained model](model/) is also deployed as a [telegram bot](https://t.me/dayyass_image_captioning_bot), so you have the opportunity to play with it.<br/>
 Despite the fact that the model is not of the best quality, it is good just for fun :)
 
 Telegram bot [link](https://t.me/dayyass_image_captioning_bot)<br/>
